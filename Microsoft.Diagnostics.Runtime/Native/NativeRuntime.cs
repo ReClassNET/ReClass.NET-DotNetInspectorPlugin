@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
 
             ulong addr = tsData.FirstThread;
             IThreadData thread = GetThread(tsData.FirstThread);
-            for (int i = 0; thread != null; i++)
+            while (thread != null)
             {
                 threads.Add(new NativeThread(this, thread, addr, tsData.Finalizer == addr));
 

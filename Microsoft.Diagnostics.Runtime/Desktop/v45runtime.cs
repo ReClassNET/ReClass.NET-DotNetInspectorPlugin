@@ -315,8 +315,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             if (_sos.GetMethodTableName(mt, 0, null, out count) < 0)
                 return null;
 
-            StringBuilder sb = new StringBuilder();
-            sb.Capacity = (int)count;
+            StringBuilder sb = new StringBuilder((int)count);
 
             if (_sos.GetMethodTableName(mt, count, sb, out count) < 0)
                 return null;

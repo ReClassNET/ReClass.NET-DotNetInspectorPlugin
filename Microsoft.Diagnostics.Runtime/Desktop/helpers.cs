@@ -205,16 +205,18 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             if (!GetMethodTables(obj, out mt, out cmt))
                 return _max-- > 0 ? 1 : 0;
 
-            ClrHandle handle = new ClrHandle();
-            handle.Address = addr;
-            handle.Object = obj;
-            handle.Type = _heap.GetObjectType(obj);
-            handle.HandleType = (HandleType)hndType;
-            handle.RefCount = refCnt;
-            handle.AppDomain = _runtime.GetAppDomainByAddress(appDomain);
-            handle.DependentTarget = dependentTarget;
+	        ClrHandle handle = new ClrHandle
+	        {
+		        Address = addr,
+		        Object = obj,
+		        Type = _heap.GetObjectType(obj),
+		        HandleType = (HandleType) hndType,
+		        RefCount = refCnt,
+		        AppDomain = _runtime.GetAppDomainByAddress(appDomain),
+		        DependentTarget = dependentTarget
+	        };
 
-            if (dependentTarget != 0)
+	        if (dependentTarget != 0)
                 handle.DependentType = _heap.GetObjectType(dependentTarget);
 
             Handles.Add(handle);

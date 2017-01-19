@@ -11,11 +11,6 @@ namespace Microsoft.Diagnostics.Runtime
 	public abstract class ClrModule
     {
         /// <summary>
-        /// Gets the runtime which contains this module.
-        /// </summary>
-        public abstract ClrRuntime Runtime { get; }
-
-        /// <summary>
         /// Returns a list of all AppDomains this module is loaded into.  Please note that unlike
         /// ClrRuntime.AppDomains, this list may include the shared AppDomain.
         /// </summary>
@@ -27,14 +22,6 @@ namespace Microsoft.Diagnostics.Runtime
         public abstract string AssemblyName { get; }
 
         /// <summary>
-        /// Returns an identifier to uniquely represent this assembly.  This value is not used by any other
-        /// function in ClrMD, but can be used to group modules by their assembly.  (Do not use AssemblyName
-        /// for this, as reflection and other special assemblies can share the same name, but actually be
-        /// different.)
-        /// </summary>
-        public abstract ulong AssemblyId { get; }
-
-        /// <summary>
         /// Returns the name of the module.
         /// </summary>
         public abstract string Name { get; }
@@ -44,11 +31,6 @@ namespace Microsoft.Diagnostics.Runtime
         /// file).
         /// </summary>
         public abstract bool IsDynamic { get; }
-
-        /// <summary>
-        /// Returns true if this module is an actual PEFile on disk.
-        /// </summary>
-        public abstract bool IsFile { get; }
 
         /// <summary>
         /// Returns the filename of where the module was loaded from on disk.  Undefined results if
@@ -71,28 +53,6 @@ namespace Microsoft.Diagnostics.Runtime
         /// Enumerate all types defined by this module.
         /// </summary>
         public abstract IEnumerable<ClrType> EnumerateTypes();
-
-        /// <summary>
-        /// The location of metadata for this module in the process's memory.  This is useful if you
-        /// need to manually create IMetaData* objects.
-        /// </summary>
-        public abstract ulong MetadataAddress { get; }
-
-        /// <summary>
-        /// The length of the metadata for this module.
-        /// </summary>
-        public abstract ulong MetadataLength { get; }
-
-        /// <summary>
-        /// The IMetaDataImport interface for this module.  Note that this API does not provide a
-        /// wrapper for IMetaDataImport.  You will need to wrap the API yourself if you need to use this.
-        /// </summary>
-        public abstract object MetadataImport { get; }
-
-        /// <summary>
-        /// The debugging attributes for this module.
-        /// </summary>
-        public abstract DebuggableAttribute.DebuggingModes DebuggingMode { get; }
 
         /// <summary>
         /// Attempts to obtain a ClrType based on the name of the type.  Note this is a "best effort" due to

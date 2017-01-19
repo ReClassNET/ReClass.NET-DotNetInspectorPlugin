@@ -76,14 +76,6 @@ namespace Microsoft.Diagnostics.Runtime.Native
             _size = module.FileSize;
         }
 
-        public override ClrRuntime Runtime
-        {
-            get
-            {
-                return _runtime;
-            }
-        }
-
         public override IList<ClrAppDomain> AppDomains
         {
             get
@@ -105,11 +97,6 @@ namespace Microsoft.Diagnostics.Runtime.Native
         public override bool IsDynamic
         {
             get { return false; }
-        }
-
-        public override bool IsFile
-        {
-            get { return true; }
         }
 
         public override string FileName
@@ -145,34 +132,9 @@ namespace Microsoft.Diagnostics.Runtime.Native
             return 0;
         }
 
-        public override Address MetadataAddress
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public override Address MetadataLength
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public override object MetadataImport
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public override System.Diagnostics.DebuggableAttribute.DebuggingModes DebuggingMode
-        {
-            get { throw new NotImplementedException(); }
-        }
-
         public override ClrType GetTypeByName(string name)
         {
             throw new NotImplementedException();
-        }
-
-        public override Address AssemblyId
-        {
-            get { throw new NotImplementedException(); }
         }
     }
 }

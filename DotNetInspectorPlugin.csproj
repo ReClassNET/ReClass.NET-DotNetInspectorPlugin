@@ -65,12 +65,48 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DotNetInspectorPluginExt.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrAppDomain.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrException.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrHeap.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrModule.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrRuntime.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrThread.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ClrType.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\DacInterfaces.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\DataTarget.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\com.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\domains.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\fields.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\heap.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\helpers.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\legacyruntime.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\lockinspection.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\methods.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\modules.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\runtimebase.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\threadpool.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\threads.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\types.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Desktop\v45runtime.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\ICorDebug\IMetadataImport.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Internal.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Interop.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeDac.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeException.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeHeap.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeModule.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeRoots.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeRuntime.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeThread.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Native\NativeTypes.cs" />
+    <Compile Include="Microsoft.Diagnostics.Runtime\Utilities\SigParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="ReClassNetDataReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReClass.NET\ReClass.NET.csproj">
@@ -86,6 +122,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\logo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ObjectListView\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

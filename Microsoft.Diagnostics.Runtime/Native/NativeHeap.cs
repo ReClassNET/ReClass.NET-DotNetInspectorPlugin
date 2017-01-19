@@ -148,7 +148,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
         {
             ulong free = NativeRuntime.GetFreeType();
             IMethodTableData mtData = NativeRuntime.GetMethodTableData(free);
-            _free = new NativeType(this, _types.Count, _mrtModule, "Free", free, mtData);
+            _free = new NativeType(this, _mrtModule, "Free", free, mtData);
             _indices[free] = _types.Count;
             _types.Add(_free);
         }
@@ -224,7 +224,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
             if (module == null)
                 module = _mrtModule;
 
-            NativeType type = new NativeType(this, _types.Count, module, name, eeType, mtData);
+            NativeType type = new NativeType(this, module, name, eeType, mtData);
             _indices[eeType] = _types.Count;
             if (!isArray)
                 _indices[canonType] = _types.Count;

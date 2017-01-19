@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Runtime
         }
     }
 
-    internal unsafe class MemoryReader
+    internal class MemoryReader
     {
         #region Variables
         protected ulong _currPageStart;
@@ -90,27 +90,18 @@ namespace Microsoft.Diagnostics.Runtime
             return true;
         }
 
-        public bool ReadDword(ulong addr, out int value)
-        {
-            uint tmp = 0;
-            bool res = ReadDword(addr, out tmp);
-
-            value = (int)tmp;
-            return res;
-        }
-
         internal bool TryReadPtr(ulong addr, out ulong value)
         {
             if ((_currPageStart <= addr) && (addr - _currPageStart < (uint)_currPageSize))
             {
                 ulong offset = addr - _currPageStart;
-                fixed (byte* b = &_data[offset])
-                    if (_ptr.Length == 4)
-                    value = *((uint*)b);
-                else
-                    value = *((ulong*)b);
 
-                return true;
+				if (_ptr.Length == 4)
+					value = BitConverter.ToUInt32(_ptr, (int)offset);
+				else
+					value = BitConverter.ToUInt64(_ptr, (int)offset);
+
+				return true;
             }
 
             return MisalignedRead(addr, out value);
@@ -122,8 +113,6 @@ namespace Microsoft.Diagnostics.Runtime
             {
                 ulong offset = addr - _currPageStart;
                 value = BitConverter.ToUInt32(_data, (int)offset);
-                fixed (byte* b = &_data[offset])
-                    value = *((uint*)b);
                 return true;
             }
 
@@ -135,10 +124,8 @@ namespace Microsoft.Diagnostics.Runtime
             if ((_currPageStart <= addr) && (addr - _currPageStart < (uint)_currPageSize))
             {
                 ulong offset = addr - _currPageStart;
-                fixed (byte* b = &_data[offset])
-                    value = *((int*)b);
-
-                return true;
+				value = BitConverter.ToInt32(_data, (int)offset);
+				return true;
             }
 
             return MisalignedRead(addr, out value);
@@ -169,13 +156,12 @@ namespace Microsoft.Diagnostics.Runtime
 
             // If we reach here we know we are on the right page of memory in the cache, and
             // that the read won't fall off of the end of the page.
-            fixed (byte* b = &_data[offset])
-                if (_ptr.Length == 4)
-                value = *((uint*)b);
-            else
-                value = *((ulong*)b);
+			if (_ptr.Length == 4)
+				value = BitConverter.ToUInt32(_data, (int)offset);
+			else
+				value = BitConverter.ToUInt64(_data, (int)offset);
 
-            return true;
+			return true;
         }
 
         public virtual void EnsureRangeInCache(ulong addr)
@@ -195,12 +181,11 @@ namespace Microsoft.Diagnostics.Runtime
         {
             int size = 0;
             bool res = _dataReader.ReadMemory(addr, _ptr, _ptr.Length, out size);
-            fixed (byte* b = _ptr)
-                if (_ptr.Length == 4)
-                value = *((uint*)b);
-            else
-                value = *((ulong*)b);
-            return res;
+			if (_ptr.Length == 4)
+				value = BitConverter.ToUInt32(_ptr, 0);
+			else
+				value = BitConverter.ToUInt64(_ptr, 0);
+			return res;
         }
 
         private bool MisalignedRead(ulong addr, out uint value)
@@ -219,7 +204,7 @@ namespace Microsoft.Diagnostics.Runtime
             return res;
         }
 
-        virtual protected bool MoveToPage(ulong addr)
+        protected virtual bool MoveToPage(ulong addr)
         {
             return ReadMemory(addr);
         }
@@ -237,6 +222,7 @@ namespace Microsoft.Diagnostics.Runtime
 
             return res;
         }
+
         #endregion
     }
     
@@ -417,7 +403,6 @@ namespace Microsoft.Diagnostics.Runtime
         [DllImport("version.dll")]
         internal static extern bool VerQueryValue(byte[] pBlock, string pSubBlock, out IntPtr val, out int len);
 
-        private const int VS_FIXEDFILEINFO_size = 0x34;
         public static short IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR = 14;
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]

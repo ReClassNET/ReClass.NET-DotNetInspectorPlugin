@@ -1595,7 +1595,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                     ret.ComponentType = componentType;
 
                     index = _types.Count;
-                    ((DesktopHeapType)ret).SetIndex(index);
                     _indices[hnd] = index;
                     _typeEntry[modEnt] = index;
                     _types.Add(ret);
@@ -1774,7 +1773,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                     ret = new DesktopHeapType(typeName, module, token, mt, mtData, this);
                     
                     index = _types.Count;
-                    ((DesktopHeapType)ret).SetIndex(index);
                     _indices[mt] = index;
 
                     // Arrays share a common token, so it's not helpful to look them up here.

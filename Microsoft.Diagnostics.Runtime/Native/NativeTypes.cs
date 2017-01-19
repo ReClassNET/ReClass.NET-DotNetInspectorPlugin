@@ -16,15 +16,13 @@ namespace Microsoft.Diagnostics.Runtime.Native
         private uint _componentSize;
         private GCDesc _gcDesc;
         private bool _containsPointers;
-        private int _index;
 
-        public NativeType(NativeHeap heap, int index, NativeModule module, string name, ulong eeType, Microsoft.Diagnostics.Runtime.Desktop.IMethodTableData mtData)
+        public NativeType(NativeHeap heap, NativeModule module, string name, ulong eeType, Desktop.IMethodTableData mtData)
         {
             _heap = heap;
             _module = module;
             _name = name;
             _eeType = eeType;
-            _index = index;
 
             if (mtData != null)
             {

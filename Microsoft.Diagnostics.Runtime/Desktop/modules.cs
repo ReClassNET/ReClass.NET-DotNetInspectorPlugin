@@ -14,14 +14,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
     {
         protected DesktopRuntimeBase _runtime;
 
-        public override ClrRuntime Runtime
-        {
-            get
-            {
-                return _runtime;
-            }
-        }
-
         internal abstract Address GetDomainModule(ClrAppDomain appDomain);
 
         internal Address ModuleId { get; set; }
@@ -46,10 +38,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         private ICorDebug.IMetadataImport _metadata;
         private Dictionary<ClrAppDomain, ulong> _mapping = new Dictionary<ClrAppDomain, ulong>();
         private Address _imageBase, _size;
-        private Address _metadataStart;
-        private Address _metadataLength;
-        private DebuggableAttribute.DebuggingModes? _debugMode;
-        private Address _assemblyAddress;
         private bool _typesLoaded;
         ClrAppDomain[] _appDomainList;
 
@@ -64,9 +52,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             _name = name;
             ModuleId = data.ModuleId;
             ModuleIndex = data.ModuleIndex;
-            _metadataStart = data.MetdataStart;
-            _metadataLength = data.MetadataLength;
-            _assemblyAddress = data.Assembly;
             _size = size;
 
 			_metadata = data.LegacyMetaDataImport as ICorDebug.IMetadataImport;
@@ -147,11 +132,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             get { return _reflection; }
         }
 
-        public override bool IsFile
-        {
-            get { return _isPE; }
-        }
-
         public override string FileName
         {
             get { return _isPE ? _name : null; }
@@ -227,69 +207,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             }
         }
 
-
-        public override Address MetadataAddress
-        {
-            get { return _metadataStart; }
-        }
-
-        public override Address MetadataLength
-        {
-            get { return _metadataLength; }
-        }
-
-        public override object MetadataImport
-        {
-            get { return GetMetadataImport(); }
-        }
-
-        public override DebuggableAttribute.DebuggingModes DebuggingMode
-        {
-            get
-            {
-                if (_debugMode == null)
-                    InitDebugAttributes();
-
-                Debug.Assert(_debugMode != null);
-                return _debugMode.Value;
-            }
-        }
-
-        private void InitDebugAttributes()
-        {
-            ICorDebug.IMetadataImport metadata = GetMetadataImport();
-            if (metadata == null)
-            {
-                _debugMode = DebuggableAttribute.DebuggingModes.None;
-                return;
-            }
-
-            try
-            {
-                IntPtr data;
-                uint cbData;
-                int hr = metadata.GetCustomAttributeByName(0x20000001, "System.Diagnostics.DebuggableAttribute", out data, out cbData);
-                if (hr != 0 || cbData <= 4)
-                {
-                    _debugMode = DebuggableAttribute.DebuggingModes.None;
-                    return;
-                }
-
-                unsafe
-                {
-                    byte* b = (byte*)data.ToPointer();
-                    UInt16 opt = b[2];
-                    UInt16 dbg = b[3];
-
-                    _debugMode = (System.Diagnostics.DebuggableAttribute.DebuggingModes)((dbg << 8) | opt);
-                }
-            }
-            catch (SEHException)
-            {
-                _debugMode = DebuggableAttribute.DebuggingModes.None;
-            }
-        }
-
         public override ClrType GetTypeByName(string name)
         {
             foreach (ClrType type in EnumerateTypes())
@@ -298,19 +215,11 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
 
             return null;
         }
-
-        public override Address AssemblyId
-        {
-            get { return _assemblyAddress; }
-        }
     }
 
     internal class ErrorModule : DesktopBaseModule
     {
-        private static uint s_id = 0;
-        private uint _id = s_id++;
-
-        public ErrorModule(DesktopRuntimeBase runtime)
+	    public ErrorModule(DesktopRuntimeBase runtime)
             : base(runtime)
         {
         }
@@ -338,11 +247,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             get { return false; }
         }
 
-        public override bool IsFile
-        {
-            get { return false; }
-        }
-
         public override string FileName
         {
             get { return "<error>"; }
@@ -363,39 +267,14 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             return new ClrType[0];
         }
 
-        public override Address MetadataAddress
-        {
-            get { return 0; }
-        }
-
-        public override Address MetadataLength
-        {
-            get { return 0; }
-        }
-
-        public override object MetadataImport
-        {
-            get { return null; }
-        }
-
         internal override Address GetDomainModule(ClrAppDomain appDomain)
         {
             return 0;
         }
 
-        public override DebuggableAttribute.DebuggingModes DebuggingMode
-        {
-            get { return DebuggableAttribute.DebuggingModes.None; }
-        }
-
         public override ClrType GetTypeByName(string name)
         {
             return null;
-        }
-
-        public override Address AssemblyId
-        {
-            get { return _id; }
         }
     }
 }

@@ -1768,12 +1768,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             _baseSize = mtData.BaseSize;
             _componentSize = mtData.ComponentSize;
             _containsPointers = mtData.ContainsPointers;
-            _hasMethods = mtData.NumMethods > 0;
-        }
-        
-        internal void SetIndex(int index)
-        {
-            _index = index;
         }
 
         private void InitFlags()
@@ -1935,7 +1929,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         }
 
         private string _name;
-        private int _index;
 
         private TypeAttributes _attributes;
         private GCDesc _gcDesc;
@@ -1952,7 +1945,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         private int[] _fieldNameMap;
 
         private int _baseArrayOffset;
-        private bool _hasMethods;
         private bool? _runtimeType;
         private EnumData _enumData;
         private bool _notRCW;

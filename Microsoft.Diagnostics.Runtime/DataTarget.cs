@@ -574,8 +574,7 @@ namespace Microsoft.Diagnostics.Runtime
     {
         #region Variables
         private IntPtr _library;
-        private DacDataTarget _dacDataTarget;
-        private IXCLRDataProcess _dac;
+	    private IXCLRDataProcess _dac;
         private ISOSDac _sos;
         private HashSet<object> _release = new HashSet<object>();
         #endregion
@@ -595,7 +594,7 @@ namespace Microsoft.Diagnostics.Runtime
 
         public DacLibrary(DataTargetImpl dataTarget, string dacDll)
         {
-            if (dataTarget.ClrVersions.Count == 0)
+	        if (dataTarget.ClrVersions.Count == 0)
                 throw new ClrDiagnosticsException(string.Format("Process is not a CLR process!"));
 
             _library = NativeMethods.LoadLibrary(dacDll);
@@ -603,12 +602,12 @@ namespace Microsoft.Diagnostics.Runtime
                 throw new ClrDiagnosticsException("Failed to load dac: " + dacDll);
 
             IntPtr addr = NativeMethods.GetProcAddress(_library, "CLRDataCreateInstance");
-            _dacDataTarget = new DacDataTarget(dataTarget);
+            var dacDataTarget = new DacDataTarget(dataTarget);
 
             object obj;
             NativeMethods.CreateDacInstance func = (NativeMethods.CreateDacInstance)Marshal.GetDelegateForFunctionPointer(addr, typeof(NativeMethods.CreateDacInstance));
             Guid guid = new Guid("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
-            int res = func(ref guid, _dacDataTarget, out obj);
+            int res = func(ref guid, dacDataTarget, out obj);
 
             if (res == 0)
                 _dac = obj as IXCLRDataProcess;
@@ -638,14 +637,12 @@ namespace Microsoft.Diagnostics.Runtime
 
     internal class DacDataTarget : IDacDataTarget, IMetadataLocator
     {
-        private DataTargetImpl _dataTarget;
-        private IDataReader _dataReader;
+	    private IDataReader _dataReader;
         private ModuleInfo[] _modules;
 
         public DacDataTarget(DataTargetImpl dataTarget)
         {
-            _dataTarget = dataTarget;
-            _dataReader = _dataTarget.DataReader;
+	        _dataReader = dataTarget.DataReader;
             _modules = dataTarget.EnumerateModules().ToArray();
             Array.Sort(_modules, delegate (ModuleInfo a, ModuleInfo b) { return a.ImageBase.CompareTo(b.ImageBase); });
         }
