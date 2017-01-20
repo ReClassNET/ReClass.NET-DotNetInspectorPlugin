@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using Microsoft.Diagnostics.Runtime;
 using ReClassNET;
 using ReClassNET.Plugins;
 
@@ -13,7 +16,7 @@ namespace DotNetInspectorPlugin
 
 		public override bool Initialize(IPluginHost pluginHost)
 		{
-			//System.Diagnostics.Debugger.Launch();
+			System.Diagnostics.Debugger.Launch();
 
 			if (host != null)
 			{
@@ -26,6 +29,18 @@ namespace DotNetInspectorPlugin
 			}
 
 			host = pluginHost;
+
+			var menuItem = host.MainWindow.MainMenu.Items.OfType<ToolStripMenuItem>().FirstOrDefault(i => i.Text == "Process");
+			if (menuItem != null)
+			{
+				var showInspectorItem = new ToolStripMenuItem
+				{
+					Text = ".NET Inspector"
+				};
+				showInspectorItem.Click += (s, e) => new InspectorForm(host.Process).Show();
+
+				menuItem.DropDownItems.Add(showInspectorItem);
+			}
 
 			return true;
 		}

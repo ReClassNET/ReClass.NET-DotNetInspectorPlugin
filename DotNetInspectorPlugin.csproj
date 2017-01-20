@@ -56,6 +56,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -64,7 +65,52 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\Comparers.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\Delegates.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\Enums.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\Events.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\Munger.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\NativeMethods.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\OLVListItem.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\OLVListSubItem.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\OlvListViewHitTestInfo.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Implementation\VirtualListDataSource.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\ObjectListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\OLVColumn.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Rendering\Renderers.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Rendering\Styles.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\Rendering\TreeRenderer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\SubControls\HeaderControl.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\SubControls\ToolTipControl.cs" />
+    <Compile Include="BrightIdeasSoftware.ObjectListView\TreeListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BrightIdeasSoftware.ObjectListView\VirtualObjectListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DotNetInspectorPluginExt.cs" />
+    <Compile Include="DotNetObject.cs" />
+    <Compile Include="DotNetObjectCollector.cs" />
+    <Compile Include="InspectorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InspectorForm.Designer.cs">
+      <DependentUpon>InspectorForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Microsoft.Diagnostics.Runtime\ClrAppDomain.cs" />
     <Compile Include="Microsoft.Diagnostics.Runtime\ClrException.cs" />
     <Compile Include="Microsoft.Diagnostics.Runtime\ClrHeap.cs" />
@@ -115,6 +161,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="InspectorForm.resx">
+      <DependentUpon>InspectorForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -123,9 +172,7 @@
   <ItemGroup>
     <None Include="Resources\logo.png" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ObjectListView\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
