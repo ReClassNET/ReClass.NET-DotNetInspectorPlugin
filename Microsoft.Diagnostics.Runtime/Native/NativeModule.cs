@@ -10,24 +10,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
 {
     internal class NativeAppDomain : ClrAppDomain
     {
-        public override ClrRuntime Runtime
-        {
-            get
-            {
-                return _runtime;
-            }
-        }
-
-        private IList<ClrModule> _modules;
-        private ClrRuntime _runtime;
-
-        public NativeAppDomain(ClrRuntime runtime, IList<ClrModule> modules)
-        {
-            _runtime = runtime;
-            _modules = modules;
-        }
-
-        public override Address Address
+	    public override Address Address
         {
             get { return 0; }
         }
@@ -40,21 +23,6 @@ namespace Microsoft.Diagnostics.Runtime.Native
         public override string Name
         {
             get { return "default domain"; }
-        }
-
-        public override IList<ClrModule> Modules
-        {
-            get { return _modules; }
-        }
-
-        public override string ConfigurationFile
-        {
-            get { return null; }
-        }
-
-        public override string ApplicationBase
-        {
-            get { return null; }
         }
     }
 
@@ -80,7 +48,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
         {
             get
             {
-                return new ClrAppDomain[] { _runtime.AppDomains[0] };
+                return new[] { _runtime.AppDomains[0] };
             }
         }
 

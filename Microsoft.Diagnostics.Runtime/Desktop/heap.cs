@@ -60,41 +60,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             return new DesktopException(objRef, (BaseDesktopHeapType)type);
         }
 
-
-        public override ulong GetEEClassByMethodTable(ulong methodTable)
-        {
-            if (methodTable == 0)
-                return 0;
-
-            IMethodTableData mtData = DesktopRuntime.GetMethodTableData(methodTable);
-            if (mtData == null)
-                return 0;
-
-            return mtData.EEClass;
-        }
-
-        public override ulong GetMethodTableByEEClass(ulong eeclass)
-        {
-            if (eeclass == 0)
-                return 0;
-
-            return DesktopRuntime.GetMethodTableByEEClass(eeclass);
-        }
-
-        public override bool TryGetMethodTable(ulong obj, out ulong methodTable, out ulong componentMethodTable)
-        {
-            componentMethodTable = 0;
-            if (!ReadPointer(obj, out methodTable))
-                return false;
-
-            if (methodTable == DesktopRuntime.ArrayMethodTable)
-                if (!ReadPointer(obj + (ulong)(IntPtr.Size * 2), out componentMethodTable))
-                    return false;
-
-            return true;
-        }
-
-
         internal ClrType GetGCHeapTypeFromModuleAndToken(ulong moduleAddr, uint token)
         {
             DesktopModule module = DesktopRuntime.GetModule(moduleAddr);
@@ -180,35 +145,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             return typeBuilder;
         }
 
-
-
-        public override IEnumerable<ulong> EnumerateFinalizableObjectAddresses()
-        {
-            SubHeap[] heaps;
-            if (DesktopRuntime.GetHeaps(out heaps))
-            {
-                foreach (SubHeap heap in heaps)
-                {
-                    foreach (Address obj in DesktopRuntime.GetPointersInRange(heap.FQLiveStart, heap.FQLiveStop))
-                    {
-                        if (obj == 0)
-                            continue;
-
-                        var type = GetObjectType(obj);
-                        if (type != null && !type.IsFinalizeSuppressed(obj))
-                            yield return obj;
-                    }
-                }
-            }
-        }
-
         private BlockingObject[] _managedLocks;
-
-        public override IEnumerable<BlockingObject> EnumerateBlockingObjects()
-        {
-            InitLockInspection();
-            return _managedLocks;
-        }
 
         internal void InitLockInspection()
         {
@@ -435,17 +372,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                 return null;
 
             return UnicodeEncoding.Unicode.GetString(buffer);
-        }
-
-        public override int ReadMemory(Address address, byte[] buffer, int offset, int count)
-        {
-            if (offset != 0)
-                throw new NotImplementedException("Non-zero offsets not supported (yet)");
-
-            int bytesRead = 0;
-            if (!DesktopRuntime.ReadMemory(address, buffer, count, out bytesRead))
-                return 0;
-            return (int)bytesRead;
         }
 
         public override IEnumerable<ClrType> EnumerateTypes()
@@ -1174,7 +1100,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         private Address _obj;
         private bool _locked;
         private int _recursion;
-        private IList<ClrThread> _waiters;
         private BlockingReason _reason;
         private ClrThread[] _owners;
 
@@ -1223,73 +1148,10 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             get { return _obj; }
         }
 
-        public override bool Taken
-        {
-            get { return _locked; }
-        }
-
-        public void SetTaken(bool status)
-        {
-            _locked = status;
-        }
-
-        public override int RecursionCount
-        {
-            get { return _recursion; }
-        }
-
-
-        public override IList<ClrThread> Waiters
-        {
-            get
-            {
-                if (_waiters == null)
-                    return s_emptyWaiters;
-
-                return _waiters;
-            }
-        }
-
-        internal void AddWaiter(ClrThread thread)
-        {
-            if (thread == null)
-                return;
-
-            if (_waiters == null)
-                _waiters = new List<ClrThread>();
-
-            _waiters.Add(thread);
-            _locked = true;
-        }
-
         public override BlockingReason Reason
         {
             get { return _reason; }
             internal set { _reason = value; }
-        }
-
-        public override ClrThread Owner
-        {
-            get
-            {
-                if (!HasSingleOwner)
-                    throw new InvalidOperationException("BlockingObject has more than one owner.");
-
-                return _owners[0];
-            }
-        }
-
-        public override bool HasSingleOwner
-        {
-            get { return _owners.Length == 1; }
-        }
-
-        public override IList<ClrThread> Owners
-        {
-            get
-            {
-                return _owners ?? new ClrThread[0];
-            }
         }
     }
 
@@ -1467,14 +1329,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         public LegacyGCHeap(DesktopRuntimeBase runtime)
             : base(runtime)
         {
-        }
-
-        public override bool HasComponentMethodTables
-        {
-            get
-            {
-                return true;
-            }
         }
 
         public override ClrType GetTypeByMethodTable(ulong mt, ulong cmt)

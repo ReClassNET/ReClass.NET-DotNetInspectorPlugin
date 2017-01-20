@@ -61,23 +61,20 @@ namespace Microsoft.Diagnostics.Runtime
             ApplicationError,
         }
 
-        /// <summary>
-        /// The HRESULT of this exception.
-        /// </summary>
-        public new int HResult { get { return base.HResult; } }
-
         #region Functions
+
         internal ClrDiagnosticsException(string message)
             : base(message)
         {
-            base.HResult = (int)HR.UnknownError;
+            HResult = (int)HR.UnknownError;
         }
 
         internal ClrDiagnosticsException(string message, HR hr)
             : base(message)
         {
-            base.HResult = (int)hr;
+            HResult = (int)hr;
         }
+
         #endregion
 
         internal static void ThrowRevisionError(int revision, int runtimeRevision)

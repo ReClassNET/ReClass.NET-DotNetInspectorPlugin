@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using Address = System.UInt64;
-using System.Runtime.InteropServices;
 using System.Linq;
+using Address = System.UInt64;
 
 namespace Microsoft.Diagnostics.Runtime.Desktop
 {
@@ -25,7 +23,7 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
 
         public int Revision { get; set; }
 
-        public DesktopBaseModule(DesktopRuntimeBase runtime)
+	    protected DesktopBaseModule(DesktopRuntimeBase runtime)
         {
             _runtime = runtime;
     }
@@ -51,7 +49,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             _reflection = data.IsReflection || string.IsNullOrEmpty(name) || !name.Contains("\\");
             _name = name;
             ModuleId = data.ModuleId;
-            ModuleIndex = data.ModuleIndex;
             _size = size;
 
 			_metadata = data.LegacyMetaDataImport as ICorDebug.IMetadataImport;
@@ -136,8 +133,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
         {
             get { return _isPE ? _name : null; }
         }
-
-        internal ulong ModuleIndex { get; private set; }
 
         internal void AddMapping(ClrAppDomain domain, ulong domainModule)
         {

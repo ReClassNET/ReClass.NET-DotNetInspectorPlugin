@@ -103,11 +103,6 @@ namespace Microsoft.Diagnostics.Runtime.Native
 
         }
 
-        public override bool TryGetMethodTable(ulong obj, out ulong methodTable, out ulong componentMethodTable)
-        {
-            throw new NotImplementedException();
-        }
-
         public override ClrRuntime Runtime
         {
             get
@@ -292,20 +287,7 @@ namespace Microsoft.Diagnostics.Runtime.Native
             }
         }
 
-        public override int ReadMemory(Address address, byte[] buffer, int offset, int count)
-        {
-            if (offset != 0)
-                throw new NotImplementedException("Non-zero offsets not supported (yet)");
-
-            int bytesRead = 0;
-            if (!NativeRuntime.ReadMemory(address, buffer, count, out bytesRead))
-                return 0;
-            return bytesRead;
-        }
-
         public override IEnumerable<ClrType> EnumerateTypes() { return null; }
-        public override IEnumerable<Address> EnumerateFinalizableObjectAddresses() { throw new NotImplementedException(); }
-        public override IEnumerable<BlockingObject> EnumerateBlockingObjects() { throw new NotImplementedException(); }
         public override ClrException GetExceptionObject(Address objRef) { throw new NotImplementedException(); }
 
         protected override int GetRuntimeRevision()

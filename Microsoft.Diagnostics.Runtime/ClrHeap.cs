@@ -18,87 +18,29 @@ namespace Microsoft.Diagnostics.Runtime
         /// <summary>
         /// And the ability to take an address of an object and fetch its type (The type alows further exploration)
         /// </summary>
-        abstract public ClrType GetObjectType(Address objRef);
-
-        /// <summary>
-        /// Returns whether this version of CLR has component MethodTables.  Component MethodTables were removed from
-        /// desktop CLR in v4.6, and do not exist at all on .Net Native.  If this method returns false, all component
-        /// MethodTables will be 0, and expected to be 0 when an argument to a function.
-        /// </summary>
-        virtual public bool HasComponentMethodTables { get { return true; } }
-
-        /// <summary>
-        /// Attempts to retrieve the MethodTable and component MethodTable from the given object.
-        /// Note that this some ClrTypes cannot be uniquely determined by MethodTable alone.  In
-        /// Desktop CLR (prior to v4.6), arrays of reference types all use the same MethodTable but
-        /// also carry a second MethodTable (called the component MethodTable) to determine the
-        /// array element types. Note this function has undefined behavior if you do not pass a
-        /// valid object reference to it.
-        /// </summary>
-        /// <param name="obj">The object to get the MethodTable of.</param>
-        /// <param name="methodTable">The MethodTable for the given object.</param>
-        /// <param name="componentMethodTable">The component MethodTable of the given object.</param>
-        /// <returns>True if methodTable was filled, false if we failed to read memory.</returns>
-        abstract public bool TryGetMethodTable(ulong obj, out ulong methodTable, out ulong componentMethodTable);
-
-        /// <summary>
-        /// Attempts to retrieve the MethodTable from the given object.
-        /// Note that this some ClrTypes cannot be uniquely determined by MethodTable alone.  In
-        /// Desktop CLR, arrays of reference types all use the same MethodTable.  To uniquely
-        /// determine an array of referneces you must also have its component type.
-        /// Note this function has undefined behavior if you do not pass a valid object reference
-        /// to it.
-        /// </summary>
-        /// <param name="obj">The object to get the MethodTablee of.</param>
-        /// <returns>The MethodTable of the object, or 0 if the address could not be read from.</returns>
-        abstract public ulong GetMethodTable(ulong obj);
-
-        /// <summary>
-        /// Retrieves the EEClass from the given MethodTable.  EEClasses do not exist on
-        /// .Net Native. 
-        /// </summary>
-        /// <param name="methodTable">The MethodTable to get the EEClass from.</param>
-        /// <returns>The EEClass for the given MethodTable, 0 if methodTable is invalid or
-        /// does not exist.</returns>
-        virtual public ulong GetEEClassByMethodTable(ulong methodTable) { return 0; }
-
-        /// <summary>
-        /// Retrieves the MethodTable associated with the given EEClass.
-        /// </summary>
-        /// <param name="eeclass">The eeclass to get the method table from.</param>
-        /// <returns>The MethodTable for the given EEClass, 0 if eeclass is invalid
-        /// or does not exist.</returns>
-        virtual public ulong GetMethodTableByEEClass(ulong eeclass) { return 0; }
+        public abstract ClrType GetObjectType(Address objRef);
 
         /// <summary>
         /// Returns a  wrapper around a System.Exception object (or one of its subclasses).
         /// </summary>
-        virtual public ClrException GetExceptionObject(Address objRef) { return null; }
+        public virtual ClrException GetExceptionObject(Address objRef) { return null; }
 
         /// <summary>
         /// Returns the runtime associated with this heap.
         /// </summary>
-        abstract public ClrRuntime Runtime { get; }
+        public abstract ClrRuntime Runtime { get; }
 
         /// <summary>
         /// A heap is has a list of contiguous memory regions called segments.  This list is returned in order of
         /// of increasing object addresses.  
         /// </summary>
-        abstract public IList<ClrSegment> Segments { get; }
+        public abstract IList<ClrSegment> Segments { get; }
 
         /// <summary>
         /// Enumerate the roots of the process.  (That is, all objects which keep other objects alive.)
         /// Equivalent to EnumerateRoots(true).
         /// </summary>
-        abstract public IEnumerable<ClrRoot> EnumerateRoots();
-
-        /// <summary>
-        /// Looks up a type by name.
-        /// </summary>
-        /// <param name="name">The name of the type.</param>
-        /// <returns>The ClrType matching 'name', null if the type was not found, and undefined if more than one
-        /// type shares the same name.</returns>
-        abstract public ClrType GetTypeByName(string name);
+        public abstract IEnumerable<ClrRoot> EnumerateRoots();
 
         /// <summary>
         /// Retrieves the given type by its MethodTable/ComponentMethodTable pair.
@@ -106,7 +48,7 @@ namespace Microsoft.Diagnostics.Runtime
         /// <param name="methodTable">The ClrType.MethodTable for the requested type.</param>
         /// <param name="componentMethodTable">The ClrType's component MethodTable for the requested type.</param>
         /// <returns>A ClrType object, or null if no such type exists.</returns>
-        abstract public ClrType GetTypeByMethodTable(ulong methodTable, ulong componentMethodTable);
+        public abstract ClrType GetTypeByMethodTable(ulong methodTable, ulong componentMethodTable);
 
         /// <summary>
         /// Retrieves the given type by its MethodTable/ComponentMethodTable pair.  Note this is only valid if
@@ -114,7 +56,7 @@ namespace Microsoft.Diagnostics.Runtime
         /// </summary>
         /// <param name="methodTable">The ClrType.MethodTable for the requested type.</param>
         /// <returns>A ClrType object, or null if no such type exists.</returns>
-        virtual public ClrType GetTypeByMethodTable(ulong methodTable)
+        public virtual ClrType GetTypeByMethodTable(ulong methodTable)
         {
             return GetTypeByMethodTable(methodTable, 0);
         }
@@ -127,34 +69,14 @@ namespace Microsoft.Diagnostics.Runtime
         /// since all static variables are pinned by handles on the HandleTable (which is also enumerated with 
         /// EnumerateRoots).  You would want to enumerate statics with roots if you care about what exact statics
         /// root what objects, but not if you care about performance.</param>
-        abstract public IEnumerable<ClrRoot> EnumerateRoots(bool enumerateStatics);
+        public abstract IEnumerable<ClrRoot> EnumerateRoots(bool enumerateStatics);
 
         /// <summary>
         /// Enumerates all types in the runtime.
         /// </summary>
         /// <returns>An enumeration of all types in the target process.  May return null if it's unsupported for
         /// that version of CLR.</returns>
-        virtual public IEnumerable<ClrType> EnumerateTypes() { return null; }
-
-        /// <summary>
-        /// Enumerates all finalizable objects on the heap.
-        /// </summary>
-        virtual public IEnumerable<Address> EnumerateFinalizableObjectAddresses() { throw new NotImplementedException(); }
-
-        /// <summary>
-        /// Enumerates all managed locks in the process.  That is anything using System.Monitor either explictly
-        /// or implicitly through "lock (obj)".  This is roughly equivalent to combining SOS's !syncblk command
-        /// with !dumpheap -thinlock.
-        /// </summary>
-        virtual public IEnumerable<BlockingObject> EnumerateBlockingObjects() { throw new NotImplementedException(); }
-
-        /// <summary>
-        /// Returns true if the GC heap is in a consistent state for heap enumeration.  This will return false
-        /// if the process was stopped in the middle of a GC, which can cause the GC heap to be unwalkable.
-        /// Note, you may still attempt to walk the heap if this function returns false, but you will likely
-        /// only be able to partially walk each segment.
-        /// </summary>
-        abstract public bool CanWalkHeap { get; }
+        public virtual IEnumerable<ClrType> EnumerateTypes() { return null; }
 
         /// <summary>
         /// Enumerates all objects on the heap.  This is equivalent to enumerating all segments then walking
@@ -162,44 +84,12 @@ namespace Microsoft.Diagnostics.Runtime
         /// for easier use in linq queries.
         /// </summary>
         /// <returns>An enumerator for all objects on the heap.</returns>
-        abstract public IEnumerable<Address> EnumerateObjectAddresses();
+        public abstract IEnumerable<Address> EnumerateObjectAddresses();
 
         /// <summary>
         /// TotalHeapSize is defined as the sum of the length of all segments.  
         /// </summary>
-        abstract public ulong TotalHeapSize { get; }
-
-        /// <summary>
-        /// Get the size by generation 0, 1, 2, 3.  The large object heap is Gen 3 here. 
-        /// The sum of all of these should add up to the TotalHeapSize.  
-        /// </summary>
-        abstract public ulong GetSizeByGen(int gen);
-
-        /// <summary>
-        /// Returns the generation of an object.
-        /// </summary>
-        public int GetGeneration(Address obj)
-        {
-            ClrSegment seg = GetSegmentByAddress(obj);
-            if (seg == null)
-                return -1;
-
-            return seg.GetGeneration(obj);
-        }
-
-        /// <summary>
-        /// Returns the object after this one on the segment.
-        /// </summary>
-        /// <param name="obj">The object to find the next for.</param>
-        /// <returns>The next object on the segment, or 0 if the object was the last one on the segment.</returns>
-        public virtual ulong NextObject(ulong obj)
-        {
-            ClrSegment seg = GetSegmentByAddress(obj);
-            if (seg == null)
-                return 0;
-
-            return seg.NextObject(obj);
-        }
+        public abstract ulong TotalHeapSize { get; }
 
         /// <summary>
         /// Returns the GC segment for the given object.
@@ -224,13 +114,8 @@ namespace Microsoft.Diagnostics.Runtime
         {
             var sizeMB = TotalHeapSize / 1000000.0;
             int segCount = Segments != null ? Segments.Count : 0;
-            return string.Format("ClrHeap {0}mb {1} segments", sizeMB, segCount);
+            return $"ClrHeap {sizeMB}mb {segCount} segments";
         }
-
-        /// <summary>
-        /// Read 'count' bytes from the ClrHeap at 'address' placing it in 'buffer' starting at offset 'offset'
-        /// </summary>
-        virtual public int ReadMemory(Address address, byte[] buffer, int offset, int count) { return 0; }
 
         /// <summary>
         /// Attempts to efficiently read a pointer from memory.  This acts exactly like ClrRuntime.ReadPointer, but
@@ -250,44 +135,12 @@ namespace Microsoft.Diagnostics.Runtime
         /// <summary>
         /// The object associated with the lock.
         /// </summary>
-        abstract public Address Object { get; }
-
-        /// <summary>
-        /// Whether or not the object is currently locked.
-        /// </summary>
-        abstract public bool Taken { get; }
-
-        /// <summary>
-        /// The recursion count of the lock (only valid if Locked is true).
-        /// </summary>
-        abstract public int RecursionCount { get; }
-
-        /// <summary>
-        /// The thread which currently owns the lock.  This is only valid if Taken is true and
-        /// only valid if HasSingleOwner is true.
-        /// </summary>
-        abstract public ClrThread Owner { get; }
-
-        /// <summary>
-        /// Returns true if this lock has only one owner.  Returns false if this lock
-        /// may have multiple owners (for example, readers on a RW lock).
-        /// </summary>
-        abstract public bool HasSingleOwner { get; }
-
-        /// <summary>
-        /// Returns the list of owners for this object.
-        /// </summary>
-        abstract public IList<ClrThread> Owners { get; }
-
-        /// <summary>
-        /// Returns the list of threads waiting on this object.
-        /// </summary>
-        abstract public IList<ClrThread> Waiters { get; }
+        public abstract Address Object { get; }
 
         /// <summary>
         /// The reason why it's blocking.
         /// </summary>
-        abstract public BlockingReason Reason { get; internal set; }
+        public abstract BlockingReason Reason { get; internal set; }
     }
 
     /// <summary>
@@ -349,56 +202,56 @@ namespace Microsoft.Diagnostics.Runtime
         /// <summary>
         /// A GC Root also has a Kind, which says if it is a strong or weak root
         /// </summary>
-        abstract public GCRootKind Kind { get; }
+        public abstract GCRootKind Kind { get; }
 
         /// <summary>
         /// The name of the root. 
         /// </summary>
-        virtual public string Name { get { return ""; } }
+        public virtual string Name { get { return ""; } }
 
         /// <summary>
         /// The type of the object this root points to.  That is, ClrHeap.GetObjectType(ClrRoot.Object).
         /// </summary>
-        abstract public ClrType Type { get; }
+        public abstract ClrType Type { get; }
 
         /// <summary>
         /// The object on the GC heap that this root keeps alive.
         /// </summary>
-        virtual public Address Object { get; protected set; }
+        public virtual Address Object { get; protected set; }
 
         /// <summary>
         /// The address of the root in the target process.
         /// </summary>
-        virtual public Address Address { get; protected set; }
+        public virtual Address Address { get; protected set; }
 
         /// <summary>
         /// If the root can be identified as belonging to a particular AppDomain this is that AppDomain.
         /// It an be null if there is no AppDomain associated with the root.  
         /// </summary>
-        virtual public ClrAppDomain AppDomain { get { return null; } }
+        public virtual ClrAppDomain AppDomain { get { return null; } }
 
         /// <summary>
         /// If the root has a thread associated with it, this will return that thread.
         /// </summary>
-        virtual public ClrThread Thread { get { return null; } }
+        public virtual ClrThread Thread { get { return null; } }
 
         /// <summary>
         /// Returns true if Object is an "interior" pointer.  This means that the pointer may actually
         /// point inside an object instead of to the start of the object.
         /// </summary>
-        virtual public bool IsInterior { get { return false; } }
+        public virtual bool IsInterior { get { return false; } }
 
         /// <summary>
         /// Returns true if the root "pins" the object, preventing the GC from relocating it.
         /// </summary>
-        virtual public bool IsPinned { get { return false; } }
+        public virtual bool IsPinned { get { return false; } }
 
         /// <summary>
         /// Unfortunately some versions of the APIs we consume do not give us perfect information.  If
         /// this property is true it means we used a heuristic to find the value, and it might not
         /// actually be considered a root by the GC.
         /// </summary>
-        virtual public bool IsPossibleFalsePositive { get { return false; } }
+        public virtual bool IsPossibleFalsePositive { get { return false; } }
 
         /// <summary>
         /// Returns a string representation of this object.
@@ -420,12 +273,12 @@ namespace Microsoft.Diagnostics.Runtime
         /// <summary>
         /// The start address of the segment.  All objects in this segment fall within Start &lt;= object &lt; End.
         /// </summary>
-        abstract public Address Start { get; }
+        public abstract Address Start { get; }
 
         /// <summary>
         /// The end address of the segment.  All objects in this segment fall within Start &lt;= object &lt; End.
         /// </summary>
-        abstract public Address End { get; }
+        public abstract Address End { get; }
 
         /// <summary>
         /// The number of bytes in the segment.
@@ -436,7 +289,7 @@ namespace Microsoft.Diagnostics.Runtime
         /// The GC heap associated with this segment.  There's only one GCHeap per process, so this is
         /// only a convenience method to keep from having to pass the heap along with a segment.
         /// </summary>
-        abstract public ClrHeap Heap { get; }
+        public abstract ClrHeap Heap { get; }
 
         /// <summary>
         /// The processor that this heap is affinitized with.  In a workstation GC, there is no processor
@@ -444,43 +297,43 @@ namespace Microsoft.Diagnostics.Runtime
         /// has a logical processor in the PC associated with it.  This property returns that logical
         /// processor number (starting at 0).
         /// </summary>
-        abstract public int ProcessorAffinity { get; }
+        public abstract int ProcessorAffinity { get; }
 
         /// <summary>
         /// The address of the end of memory reserved for the segment, but not committed.
         /// </summary>
-        virtual public Address ReservedEnd { get { return 0; } }
+        public virtual Address ReservedEnd { get { return 0; } }
 
         /// <summary>
         /// The address of the end of memory committed for the segment (this may be longer than Length).
         /// </summary>
-        virtual public Address CommittedEnd { get { return 0; } }
+        public virtual Address CommittedEnd { get { return 0; } }
 
         /// <summary>
         /// If it is possible to move from one object to the 'next' object in the segment. 
         /// Then FirstObject returns the first object in the heap (or null if it is not
         /// possible to walk the heap.
         /// </summary>
-        virtual public Address FirstObject { get { return 0; } }
+        public virtual Address FirstObject { get { return 0; } }
 
         /// <summary>
         /// Given an object on the segment, return the 'next' object in the segment.  Returns
         /// 0 when there are no more objects.   (Or enumeration is not possible)  
         /// </summary>
-        virtual public Address NextObject(Address objRef) { return 0; }
+        public virtual Address NextObject(Address objRef) { return 0; }
 
         /// <summary>
         /// Returns true if this is a segment for the Large Object Heap.  False otherwise.
         /// Large objects (greater than 85,000 bytes in size), are stored in their own segments and
         /// only collected on full (gen 2) collections. 
         /// </summary>
-        virtual public bool IsLarge { get { return false; } }
+        public virtual bool IsLarge { get { return false; } }
 
         /// <summary>
         /// Returns true if this segment is the ephemeral segment (meaning it contains gen0 and gen1
         /// objects).
         /// </summary>
-        virtual public bool IsEphemeral { get { return false; } }
+        public virtual bool IsEphemeral { get { return false; } }
 
         /// <summary>
         /// Ephemeral heap sements have geneation 0 and 1 in them.  Gen 1 is always above Gen 2 and
@@ -488,37 +341,37 @@ namespace Microsoft.Diagnostics.Runtime
         /// if this is not an Ephemeral segment, then this will return End (which makes Gen 0 empty
         /// for this segment)
         /// </summary>
-        virtual public Address Gen0Start { get { return Start; } }
+        public virtual Address Gen0Start { get { return Start; } }
 
         /// <summary>
         /// The length of the gen0 portion of this segment.
         /// </summary>
-        virtual public ulong Gen0Length { get { return Length; } }
+        public virtual ulong Gen0Length { get { return Length; } }
 
         /// <summary>
         /// The start of the gen1 portion of this segment.
         /// </summary>
-        virtual public Address Gen1Start { get { return End; } }
+        public virtual Address Gen1Start { get { return End; } }
 
         /// <summary>
         /// The length of the gen1 portion of this segment.
         /// </summary>
-        virtual public ulong Gen1Length { get { return 0; } }
+        public virtual ulong Gen1Length { get { return 0; } }
 
         /// <summary>
         /// The start of the gen2 portion of this segment.
         /// </summary>
-        virtual public Address Gen2Start { get { return End; } }
+        public virtual Address Gen2Start { get { return End; } }
 
         /// <summary>
         /// The length of the gen2 portion of this segment.
         /// </summary>
-        virtual public ulong Gen2Length { get { return 0; } }
+        public virtual ulong Gen2Length { get { return 0; } }
 
         /// <summary>
         /// Enumerates all objects on the segment.
         /// </summary>
-        abstract public IEnumerable<ulong> EnumerateObjectAddresses();
+        public abstract IEnumerable<ulong> EnumerateObjectAddresses();
 
         /// <summary>
         /// Returns the generation of an object in this segment.
@@ -527,7 +380,7 @@ namespace Microsoft.Diagnostics.Runtime
         /// <returns>The generation of the given object if that object lies in this segment.  The return
         ///          value is undefined if the object does not lie in this segment.
         /// </returns>
-        virtual public int GetGeneration(Address obj)
+        public virtual int GetGeneration(Address obj)
         {
             if (Gen0Start <= obj && obj < (Gen0Start + Gen0Length))
             {
@@ -675,15 +528,6 @@ namespace Microsoft.Diagnostics.Runtime
             _pointerSize = runtime.PointerSize;
         }
 
-        public override ulong GetMethodTable(ulong obj)
-        {
-            ulong mt;
-            if (!MemoryReader.ReadPtr(obj, out mt))
-                return 0;
-
-            return mt;
-        }
-
         public override bool ReadPointer(Address addr, out Address value)
         {
             if (MemoryReader.Contains(addr))
@@ -704,14 +548,6 @@ namespace Microsoft.Diagnostics.Runtime
             }
         }
 
-        public override bool CanWalkHeap
-        {
-            get
-            {
-                return _canWalkHeap;
-            }
-        }
-
         public override IList<ClrSegment> Segments
         {
             get
@@ -724,24 +560,6 @@ namespace Microsoft.Diagnostics.Runtime
         public override Address TotalHeapSize
         {
             get { return _totalHeapSize; }
-        }
-
-        public override Address GetSizeByGen(int gen)
-        {
-            Debug.Assert(gen >= 0 && gen < 4);
-            return _sizeByGen[gen];
-        }
-
-        public override ClrType GetTypeByName(string name)
-        {
-            foreach (var module in Runtime.Modules)
-            {
-                var type = module.GetTypeByName(name);
-                if (type != null)
-                    return type;
-            }
-
-            return null;
         }
 
         internal MemoryReader MemoryReader { get; private set; }

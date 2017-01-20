@@ -332,8 +332,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                     }
                 }
 
-                foreach (DesktopBlockingObject blobj in blobjs)
-                    blobj.AddWaiter(thread);
                 thread.SetBlockingObjects(blobjs.ToArray());
             }
         }

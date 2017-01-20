@@ -610,7 +610,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
                             if (clrModule != null)
                             {
                                 clrModule.AddMapping(appDomain, module);
-                                appDomain.AddModule(clrModule);
                             }
                         }
                     }
@@ -1127,7 +1126,6 @@ namespace Microsoft.Diagnostics.Runtime.Desktop
             HeapNum = heapNum;
         }
     }
-
 
     #region Data Interfaces
     internal enum CodeHeapType
