@@ -1,0 +1,1124 @@
+using System;
+using System.Drawing;
+using System.Runtime.Remoting.Messaging;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using System.Windows.Forms.VisualStyles;
+using System.Drawing.Drawing2D;
+using System.Security.Permissions;
+
+namespace BrightIdeasSoftware
+{
+
+	/// <summary>
+	/// Class used to capture window messages for the header of the list view
+	/// control.
+	/// </summary>
+	public class HeaderControl : NativeWindow
+	{
+		/// <summary>
+		/// Create a header control for the given ObjectListView.
+		/// </summary>
+		/// <param name="olv"></param>
+		public HeaderControl(ObjectListView olv)
+		{
+			ListView = olv;
+			AssignHandle(NativeMethods.GetHeaderControl(olv));
+		}
+
+		#region Properties
+
+		/// <summary>
+		/// Return the index of the column under the current cursor position,
+		/// or -1 if the cursor is not over a column
+		/// </summary>
+		/// <returns>Index of the column under the cursor, or -1</returns>
+		public int ColumnIndexUnderCursor
+		{
+			get
+			{
+				Point pt = ScrolledCursorPosition;
+				return NativeMethods.GetColumnUnderPoint(Handle, pt);
+			}
+		}
+
+		/// <summary>
+		/// Return the Windows handle behind this control
+		/// </summary>
+		/// <remarks>
+		/// When an ObjectListView is initialized as part of a UserControl, the
+		/// GetHeaderControl() method returns 0 until the UserControl is
+		/// completely initialized. So the AssignHandle() call in the constructor
+		/// doesn't work. So we override the Handle property so value is always
+		/// current.
+		/// </remarks>
+		public new IntPtr Handle
+		{
+			get { return NativeMethods.GetHeaderControl(ListView); }
+		}
+
+		/// <summary>
+		/// Gets the index of the column under the cursor if the cursor is over it's checkbox
+		/// </summary>
+		protected int GetColumnCheckBoxUnderCursor()
+		{
+			Point pt = ScrolledCursorPosition;
+
+			int columnIndex = NativeMethods.GetColumnUnderPoint(Handle, pt);
+			return IsPointOverHeaderCheckBox(columnIndex, pt) ? columnIndex : -1;
+		}
+
+		/// <summary>
+		/// Gets the client rectangle for the header
+		/// </summary>
+		public Rectangle ClientRectangle
+		{
+			get
+			{
+				Rectangle r = new Rectangle();
+				NativeMethods.GetClientRect(Handle, ref r);
+				return r;
+			}
+		}
+
+		/// <summary>
+		/// Return true if the given point is over the checkbox for the given column.
+		/// </summary>
+		/// <param name="columnIndex"></param>
+		/// <param name="pt"></param>
+		/// <returns></returns>
+		protected bool IsPointOverHeaderCheckBox(int columnIndex, Point pt)
+		{
+			if (columnIndex < 0 || columnIndex >= ListView.Columns.Count)
+				return false;
+
+			OLVColumn column = ListView.GetColumn(columnIndex);
+			if (!HasCheckBox(column))
+				return false;
+
+			Rectangle r = GetCheckBoxBounds(column);
+			r.Inflate(1, 1); // make the target slightly bigger
+			return r.Contains(pt);
+		}
+
+		/// <summary>
+		/// Gets whether the cursor is over a "locked" divider, i.e.
+		/// one that cannot be dragged by the user.
+		/// </summary>
+		protected bool IsCursorOverLockedDivider
+		{
+			get
+			{
+				Point pt = ScrolledCursorPosition;
+				int dividerIndex = NativeMethods.GetDividerUnderPoint(Handle, pt);
+				if (dividerIndex >= 0 && dividerIndex < ListView.Columns.Count)
+				{
+					OLVColumn column = ListView.GetColumn(dividerIndex);
+					return column.IsFixedWidth || column.FillsFreeSpace;
+				}
+				else
+					return false;
+			}
+		}
+
+		private Point ScrolledCursorPosition
+		{
+			get
+			{
+				Point pt = ListView.PointToClient(Cursor.Position);
+				pt.X += ListView.LowLevelScrollPosition.X;
+				return pt;
+			}
+		}
+
+		/// <summary>
+		/// Gets or sets the listview that this header belongs to
+		/// </summary>
+		protected ObjectListView ListView
+		{
+			get { return listView; }
+			set { listView = value; }
+		}
+
+		private ObjectListView listView;
+
+		/// <summary>
+		/// Gets the maximum height of the header. -1 means no maximum.
+		/// </summary>
+		public int MaximumHeight
+		{
+			get { return ListView.HeaderMaximumHeight; }
+		}
+
+		/// <summary>
+		/// Gets the minimum height of the header. -1 means no minimum.
+		/// </summary>
+		public int MinimumHeight
+		{
+			get { return ListView.HeaderMinimumHeight; }
+		}
+
+		/// <summary>
+		/// Gets or sets whether the text in column headers should be word
+		/// wrapped when it is too long to fit within the column
+		/// </summary>
+		public bool WordWrap
+		{
+			get { return wordWrap; }
+			set { wordWrap = value; }
+		}
+
+		private bool wordWrap;
+
+		#endregion
+
+		#region Commands
+
+		/// <summary>
+		/// Calculate how height the header needs to be
+		/// </summary>
+		/// <returns>Height in pixels</returns>
+		protected int CalculateHeight(Graphics g)
+		{
+			TextFormatFlags flags = TextFormatFlags;
+			int columnUnderCursor = ColumnIndexUnderCursor;
+			float height = MinimumHeight;
+			for (int i = 0; i < ListView.Columns.Count; i++)
+			{
+				OLVColumn column = ListView.GetColumn(i);
+				height = Math.Max(height, CalculateColumnHeight(g, column, flags, columnUnderCursor == i, i));
+			}
+			return MaximumHeight == -1 ? (int)height : Math.Min(MaximumHeight, (int)height);
+		}
+
+		private float CalculateColumnHeight(Graphics g, OLVColumn column, TextFormatFlags flags, bool isHot, int i)
+		{
+			Font f = CalculateFont(column, isHot, false);
+			if (column.IsHeaderVertical)
+				return TextRenderer.MeasureText(g, column.Text, f, new Size(10000, 10000), flags).Width;
+
+			const int fudge = 9; // 9 is a magic constant that makes it perfectly match XP behavior
+			if (!WordWrap)
+				return f.Height + fudge;
+
+			Rectangle r = GetHeaderDrawRect(i);
+			if (HasNonThemedSortIndicator(column))
+				r.Width -= 16;
+			if (column.HasHeaderImage)
+				r.Width -= column.ImageList.ImageSize.Width + 3;
+			if (HasCheckBox(column))
+				r.Width -= CalculateCheckBoxBounds(g, r).Width;
+			SizeF size = TextRenderer.MeasureText(g, column.Text, f, new Size(r.Width, 100), flags);
+			return size.Height + fudge;
+		}
+
+		/// <summary>
+		/// Get the bounds of the checkbox against the given column
+		/// </summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		public Rectangle GetCheckBoxBounds(OLVColumn column)
+		{
+			Rectangle r = GetHeaderDrawRect(column.Index);
+
+			using (Graphics g = ListView.CreateGraphics())
+				return CalculateCheckBoxBounds(g, r);
+		}
+
+		/// <summary>
+		/// Should the given column be drawn with a checkbox against it?
+		/// </summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		public bool HasCheckBox(OLVColumn column)
+		{
+			return column.HeaderCheckBox || column.HeaderTriStateCheckBox;
+		}
+
+		/// <summary>
+		/// Should the given column show a sort indicator?
+		/// </summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		protected bool HasSortIndicator(OLVColumn column)
+		{
+			if (!ListView.ShowSortIndicators)
+				return false;
+			return column == ListView.LastSortColumn && ListView.LastSortOrder != SortOrder.None;
+		}
+
+		/// <summary>
+		/// Should the given column show a non-themed sort indicator?
+		/// </summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		protected bool HasNonThemedSortIndicator(OLVColumn column)
+		{
+			if (!ListView.ShowSortIndicators)
+				return false;
+			if (VisualStyleRenderer.IsSupported)
+				return !VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.SortArrow.SortedUp) &&
+					HasSortIndicator(column);
+			else
+				return HasSortIndicator(column);
+		}
+
+		/// <summary>
+		/// Return the bounds of the item with the given index
+		/// </summary>
+		/// <param name="itemIndex"></param>
+		/// <returns></returns>
+		public Rectangle GetItemRect(int itemIndex)
+		{
+			const int HDM_FIRST = 0x1200;
+			const int HDM_GETITEMRECT = HDM_FIRST + 7;
+			NativeMethods.RECT r = new NativeMethods.RECT();
+			NativeMethods.SendMessageRECT(Handle, HDM_GETITEMRECT, itemIndex, ref r);
+			return Rectangle.FromLTRB(r.left, r.top, r.right, r.bottom);
+		}
+
+		/// <summary>
+		/// Return the bounds within which the given column will be drawn
+		/// </summary>
+		/// <param name="itemIndex"></param>
+		/// <returns></returns>
+		public Rectangle GetHeaderDrawRect(int itemIndex)
+		{
+			Rectangle r = GetItemRect(itemIndex);
+
+			// Tweak the text rectangle a little to improve aethestics
+			r.Inflate(-3, 0);
+			r.Y -= 2;
+
+			return r;
+		}
+
+		/// <summary>
+		/// Force the header to redraw by invalidating it
+		/// </summary>
+		public void Invalidate()
+		{
+			NativeMethods.InvalidateRect(Handle, 0, true);
+		}
+
+		/// <summary>
+		/// Force the header to redraw a single column by invalidating it
+		/// </summary>
+		public void Invalidate(OLVColumn column)
+		{
+			NativeMethods.InvalidateRect(Handle, 0, true); // todo
+		}
+
+		#endregion
+
+		#region Windows messaging
+
+		/// <summary>
+		/// Override the basic message pump
+		/// </summary>
+		/// <param name="m"></param>
+		[SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
+		protected override void WndProc(ref Message m)
+		{
+			const int WM_DESTROY = 2;
+			const int WM_SETCURSOR = 0x20;
+			const int WM_MOUSEMOVE = 0x200;
+			const int WM_LBUTTONDOWN = 0x201;
+			const int WM_LBUTTONUP = 0x202;
+			const int WM_MOUSELEAVE = 675;
+			const int HDM_FIRST = 0x1200;
+			const int HDM_LAYOUT = (HDM_FIRST + 5);
+
+			// System.Diagnostics.Debug.WriteLine(String.Format("WndProc: {0}", m.Msg));
+
+			switch (m.Msg)
+			{
+				case WM_SETCURSOR:
+					if (!HandleSetCursor(ref m))
+						return;
+					break;
+
+				case WM_MOUSEMOVE:
+					if (!HandleMouseMove(ref m))
+						return;
+					break;
+
+				case WM_MOUSELEAVE:
+					if (!HandleMouseLeave(ref m))
+						return;
+					break;
+
+				case HDM_LAYOUT:
+					if (!HandleLayout(ref m))
+						return;
+					break;
+
+				case WM_DESTROY:
+					if (!HandleDestroy(ref m))
+						return;
+					break;
+
+				case WM_LBUTTONDOWN:
+					if (!HandleLButtonDown(ref m))
+						return;
+					break;
+
+				case WM_LBUTTONUP:
+					if (!HandleLButtonUp(ref m))
+						return;
+					break;
+			}
+
+			base.WndProc(ref m);
+		}
+
+		/// <summary>
+		/// Handle the LButtonDown windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleLButtonDown(ref Message m)
+		{
+			// Was there a header checkbox under the cursor?
+			columnIndexCheckBoxMouseDown = GetColumnCheckBoxUnderCursor();
+			if (columnIndexCheckBoxMouseDown < 0)
+				return true;
+
+			// Redraw the header so the checkbox redraws
+			Invalidate();
+
+			// Force the owning control to ignore this mouse click 
+			// We don't want to sort the listview when they click the checkbox
+			m.Result = (IntPtr)1;
+			return false;
+		}
+
+		private int columnIndexCheckBoxMouseDown = -1;
+
+		/// <summary>
+		/// Handle the LButtonUp windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleLButtonUp(ref Message m)
+		{
+			//System.Diagnostics.Debug.WriteLine("WM_LBUTTONUP");
+
+			// Was the mouse released over a header checkbox?
+			if (columnIndexCheckBoxMouseDown < 0)
+				return true;
+
+			// Was the mouse released over the same checkbox on which it was pressed?
+			if (columnIndexCheckBoxMouseDown != GetColumnCheckBoxUnderCursor())
+				return true;
+
+			// Toggle the header's checkbox
+			OLVColumn column = ListView.GetColumn(columnIndexCheckBoxMouseDown);
+			ListView.ToggleHeaderCheckBox(column);
+
+			return true;
+		}
+
+		/// <summary>
+		/// Handle the SetCursor windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleSetCursor(ref Message m)
+		{
+			if (IsCursorOverLockedDivider)
+			{
+				m.Result = (IntPtr)1; // Don't change the cursor
+				return false;
+			}
+			return true;
+		}
+
+		/// <summary>
+		/// Handle the MouseMove windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleMouseMove(ref Message m)
+		{
+
+			// Forward the mouse move event to the ListView itself
+			if (ListView.TriggerCellOverEventsWhenOverHeader)
+			{
+				int x = m.LParam.ToInt32() & 0xFFFF;
+				int y = (m.LParam.ToInt32() >> 16) & 0xFFFF;
+				ListView.HandleMouseMove(new Point(x, y));
+			}
+
+			int columnIndex = ColumnIndexUnderCursor;
+
+			// If the mouse has moved onto or away from a checkbox, we need to draw
+			int checkBoxUnderCursor = GetColumnCheckBoxUnderCursor();
+			if (checkBoxUnderCursor != lastCheckBoxUnderCursor)
+			{
+				Invalidate();
+				lastCheckBoxUnderCursor = checkBoxUnderCursor;
+			}
+
+			return true;
+		}
+
+		private int lastCheckBoxUnderCursor = -1;
+
+		/// <summary>
+		/// Handle the MouseLeave windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleMouseLeave(ref Message m)
+		{
+			// Forward the mouse leave event to the ListView itself
+			if (ListView.TriggerCellOverEventsWhenOverHeader)
+				ListView.HandleMouseMove(new Point(-1, -1));
+
+			return true;
+		}
+
+		/// <summary>
+		/// Handle the CustomDraw windows message
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		internal virtual bool HandleHeaderCustomDraw(ref Message m)
+		{
+			const int CDRF_NEWFONT = 2;
+			const int CDRF_SKIPDEFAULT = 4;
+			const int CDRF_NOTIFYPOSTPAINT = 0x10;
+			const int CDRF_NOTIFYITEMDRAW = 0x20;
+
+			const int CDDS_PREPAINT = 1;
+			const int CDDS_POSTPAINT = 2;
+			const int CDDS_ITEM = 0x00010000;
+			const int CDDS_ITEMPREPAINT = (CDDS_ITEM | CDDS_PREPAINT);
+			const int CDDS_ITEMPOSTPAINT = (CDDS_ITEM | CDDS_POSTPAINT);
+
+			NativeMethods.NMCUSTOMDRAW nmcustomdraw = (NativeMethods.NMCUSTOMDRAW)m.GetLParam(typeof(NativeMethods.NMCUSTOMDRAW));
+			//System.Diagnostics.Debug.WriteLine(String.Format("header cd: {0:x}, {1}, {2:x}", nmcustomdraw.dwDrawStage, nmcustomdraw.dwItemSpec, nmcustomdraw.uItemState));
+			switch (nmcustomdraw.dwDrawStage)
+			{
+				case CDDS_PREPAINT:
+					cachedNeedsCustomDraw = NeedsCustomDraw();
+					m.Result = (IntPtr)CDRF_NOTIFYITEMDRAW;
+					return true;
+
+				case CDDS_ITEMPREPAINT:
+					int columnIndex = nmcustomdraw.dwItemSpec.ToInt32();
+					OLVColumn column = ListView.GetColumn(columnIndex);
+
+					// These don't work when visual styles are enabled
+					//NativeMethods.SetBkColor(nmcustomdraw.hdc, ColorTranslator.ToWin32(Color.Red));
+					//NativeMethods.SetTextColor(nmcustomdraw.hdc, ColorTranslator.ToWin32(Color.Blue));
+					//m.Result = IntPtr.Zero;
+
+					if (cachedNeedsCustomDraw)
+					{
+						using (Graphics g = Graphics.FromHdc(nmcustomdraw.hdc))
+						{
+							g.TextRenderingHint = ObjectListView.TextRenderingHint;
+							CustomDrawHeaderCell(g, columnIndex, nmcustomdraw.uItemState);
+						}
+						m.Result = (IntPtr)CDRF_SKIPDEFAULT;
+					}
+					else
+					{
+						const int CDIS_SELECTED = 1;
+						bool isPressed = ((nmcustomdraw.uItemState & CDIS_SELECTED) == CDIS_SELECTED);
+
+						// We don't need to modify this based on checkboxes, since there can't be checkboxes if we are here
+						bool isHot = columnIndex == ColumnIndexUnderCursor;
+
+						Font f = CalculateFont(column, isHot, isPressed);
+
+						fontHandle = f.ToHfont();
+						NativeMethods.SelectObject(nmcustomdraw.hdc, fontHandle);
+
+						m.Result = (IntPtr)(CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT);
+					}
+
+					return true;
+
+				case CDDS_ITEMPOSTPAINT:
+					if (fontHandle != IntPtr.Zero)
+					{
+						NativeMethods.DeleteObject(fontHandle);
+						fontHandle = IntPtr.Zero;
+					}
+					break;
+			}
+
+			return false;
+		}
+
+		private bool cachedNeedsCustomDraw;
+		private IntPtr fontHandle;
+
+		/// <summary>
+		/// The message divides a ListView's space between the header and the rows of the listview.
+		/// The WINDOWPOS structure controls the headers bounds, the RECT controls the listview bounds.
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleLayout(ref Message m)
+		{
+			if (ListView.HeaderStyle == ColumnHeaderStyle.None)
+				return true;
+
+			NativeMethods.HDLAYOUT hdlayout = (NativeMethods.HDLAYOUT)m.GetLParam(typeof(NativeMethods.HDLAYOUT));
+			NativeMethods.RECT rect = (NativeMethods.RECT)Marshal.PtrToStructure(hdlayout.prc, typeof(NativeMethods.RECT));
+			NativeMethods.WINDOWPOS wpos = (NativeMethods.WINDOWPOS)Marshal.PtrToStructure(hdlayout.pwpos, typeof(NativeMethods.WINDOWPOS));
+
+			using (Graphics g = ListView.CreateGraphics())
+			{
+				g.TextRenderingHint = ObjectListView.TextRenderingHint;
+				int height = CalculateHeight(g);
+				wpos.hwnd = Handle;
+				wpos.hwndInsertAfter = IntPtr.Zero;
+				wpos.flags = NativeMethods.SWP_FRAMECHANGED;
+				wpos.x = rect.left;
+				wpos.y = rect.top;
+				wpos.cx = rect.right - rect.left;
+				wpos.cy = height;
+
+				rect.top = height;
+
+				Marshal.StructureToPtr(rect, hdlayout.prc, false);
+				Marshal.StructureToPtr(wpos, hdlayout.pwpos, false);
+			}
+
+			ListView.BeginInvoke((MethodInvoker)delegate
+			{
+				Invalidate();
+				ListView.Invalidate();
+			});
+			return false;
+		}
+
+		/// <summary>
+		/// Handle when the underlying header control is destroyed
+		/// </summary>
+		/// <param name="m"></param>
+		/// <returns></returns>
+		protected bool HandleDestroy(ref Message m)
+		{
+			return false;
+		}
+
+		#endregion
+
+		#region Rendering
+
+		/// <summary>
+		/// Does this header need to be custom drawn?
+		/// </summary>
+		/// <remarks>Word wrapping and colored text require custom drawning. Funnily enough, we
+		/// can change the font natively.</remarks>
+		protected bool NeedsCustomDraw()
+		{
+			if (WordWrap)
+				return true;
+
+			if (ListView.HeaderUsesThemes)
+				return false;
+
+			if (NeedsCustomDraw(ListView.HeaderFormatStyle))
+				return true;
+
+			foreach (OLVColumn column in ListView.Columns)
+			{
+				if (column.HasHeaderImage ||
+					!column.ShowTextInHeader ||
+					column.IsHeaderVertical ||
+					HasCheckBox(column) ||
+					column.TextAlign != column.HeaderTextAlignOrDefault ||
+					(column.Index == 0 && column.HeaderTextAlignOrDefault != HorizontalAlignment.Left) ||
+					NeedsCustomDraw(column.HeaderFormatStyle))
+					return true;
+			}
+
+			return false;
+		}
+
+		private bool NeedsCustomDraw(HeaderFormatStyle style)
+		{
+			if (style == null)
+				return false;
+
+			return (NeedsCustomDraw(style.Normal) ||
+				NeedsCustomDraw(style.Hot) ||
+				NeedsCustomDraw(style.Pressed));
+		}
+
+		private bool NeedsCustomDraw(HeaderStateStyle style)
+		{
+			if (style == null)
+				return false;
+
+			// If we want fancy colors or frames, we have to custom draw. Oddly enough, we 
+			// can handle font changes without custom drawing.
+			if (!style.BackColor.IsEmpty)
+				return true;
+
+			if (style.FrameWidth > 0f && !style.FrameColor.IsEmpty)
+				return true;
+
+			return (!style.ForeColor.IsEmpty && style.ForeColor != Color.Black);
+		}
+
+		/// <summary>
+		/// Draw one cell of the header
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="itemState"></param>
+		protected void CustomDrawHeaderCell(Graphics g, int columnIndex, int itemState)
+		{
+			OLVColumn column = ListView.GetColumn(columnIndex);
+
+			bool hasCheckBox = HasCheckBox(column);
+			bool isMouseOverCheckBox = columnIndex == lastCheckBoxUnderCursor;
+			bool isMouseDownOnCheckBox = isMouseOverCheckBox && Control.MouseButtons == MouseButtons.Left;
+			bool isHot = (columnIndex == ColumnIndexUnderCursor) && (!(hasCheckBox && isMouseOverCheckBox));
+
+			const int CDIS_SELECTED = 1;
+			bool isPressed = ((itemState & CDIS_SELECTED) == CDIS_SELECTED);
+
+			// System.Diagnostics.Debug.WriteLine(String.Format("{2:hh:mm:ss.ff} - HeaderCustomDraw: {0}, {1}", columnIndex, itemState, DateTime.Now));
+
+			// Calculate which style should be used for the header
+			HeaderStateStyle stateStyle = CalculateStateStyle(column, isHot, isPressed);
+
+			// If there is an owner drawn delegate installed, give it a chance to draw the header
+			Rectangle fullCellBounds = GetItemRect(columnIndex);
+			if (column.HeaderDrawing != null)
+			{
+				if (!column.HeaderDrawing(g, fullCellBounds, columnIndex, column, isPressed, stateStyle))
+					return;
+			}
+
+			// Draw the background
+			if (ListView.HeaderUsesThemes &&
+				VisualStyleRenderer.IsSupported &&
+				VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.Item.Normal))
+				DrawThemedBackground(g, fullCellBounds, columnIndex, isPressed, isHot);
+			else
+				DrawUnthemedBackground(g, fullCellBounds, columnIndex, isPressed, isHot, stateStyle);
+
+			Rectangle r = GetHeaderDrawRect(columnIndex);
+
+			// Draw the sort indicator if this column has one
+			if (HasSortIndicator(column))
+			{
+				if (ListView.HeaderUsesThemes &&
+					VisualStyleRenderer.IsSupported &&
+					VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.SortArrow.SortedUp))
+					DrawThemedSortIndicator(g, r);
+				else
+					r = DrawUnthemedSortIndicator(g, r);
+			}
+
+			if (hasCheckBox)
+				r = DrawCheckBox(g, r, column.HeaderCheckState, column.HeaderCheckBoxDisabled, isMouseOverCheckBox, isMouseDownOnCheckBox);
+
+			// Debugging - Where is the text going to be drawn
+			//            g.DrawRectangle(Pens.Blue, r);
+
+			// Finally draw the text
+			DrawHeaderImageAndText(g, r, column, stateStyle);
+		}
+
+		private Rectangle DrawCheckBox(Graphics g, Rectangle r, CheckState checkState, bool isDisabled, bool isHot,
+			bool isPressed)
+		{
+			CheckBoxState checkBoxState = GetCheckBoxState(checkState, isDisabled, isHot, isPressed);
+			Rectangle checkBoxBounds = CalculateCheckBoxBounds(g, r);
+			CheckBoxRenderer.DrawCheckBox(g, checkBoxBounds.Location, checkBoxState);
+
+			// Move the left edge without changing the right edge
+			int newX = checkBoxBounds.Right + 3;
+			r.Width -= (newX - r.X);
+			r.X = newX;
+
+			return r;
+		}
+
+		private Rectangle CalculateCheckBoxBounds(Graphics g, Rectangle cellBounds)
+		{
+			Size checkBoxSize = CheckBoxRenderer.GetGlyphSize(g, CheckBoxState.CheckedNormal);
+
+			// Vertically center the checkbox
+			int topOffset = (cellBounds.Height - checkBoxSize.Height) / 2;
+			return new Rectangle(cellBounds.X + 3, cellBounds.Y + topOffset, checkBoxSize.Width, checkBoxSize.Height);
+		}
+
+		private CheckBoxState GetCheckBoxState(CheckState checkState, bool isDisabled, bool isHot, bool isPressed)
+		{
+			// Should the checkbox be drawn as disabled?
+			if (isDisabled)
+			{
+				switch (checkState)
+				{
+					case CheckState.Checked:
+						return CheckBoxState.CheckedDisabled;
+					case CheckState.Unchecked:
+						return CheckBoxState.UncheckedDisabled;
+					default:
+						return CheckBoxState.MixedDisabled;
+				}
+			}
+
+			// Is the mouse button currently down?
+			if (isPressed)
+			{
+				switch (checkState)
+				{
+					case CheckState.Checked:
+						return CheckBoxState.CheckedPressed;
+					case CheckState.Unchecked:
+						return CheckBoxState.UncheckedPressed;
+					default:
+						return CheckBoxState.MixedPressed;
+				}
+			}
+
+			// Is the cursor currently over this checkbox?
+			if (isHot)
+			{
+				switch (checkState)
+				{
+					case CheckState.Checked:
+						return CheckBoxState.CheckedHot;
+					case CheckState.Unchecked:
+						return CheckBoxState.UncheckedHot;
+					default:
+						return CheckBoxState.MixedHot;
+				}
+			}
+
+			// Not hot and not disabled -- just draw it normally
+			switch (checkState)
+			{
+				case CheckState.Checked:
+					return CheckBoxState.CheckedNormal;
+				case CheckState.Unchecked:
+					return CheckBoxState.UncheckedNormal;
+				default:
+					return CheckBoxState.MixedNormal;
+			}
+		}
+
+		/// <summary>
+		/// Draw a background for the header, without using Themes.
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="r"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="isPressed"></param>
+		/// <param name="isHot"></param>
+		/// <param name="stateStyle"></param>
+		protected void DrawUnthemedBackground(Graphics g, Rectangle r, int columnIndex, bool isPressed, bool isHot, HeaderStateStyle stateStyle)
+		{
+			if (stateStyle.BackColor.IsEmpty)
+				// I know we're supposed to be drawing the unthemed background, but let's just see if we
+				// can draw something more interesting than the dull raised block
+				if (VisualStyleRenderer.IsSupported &&
+					VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.Item.Normal))
+					DrawThemedBackground(g, r, columnIndex, isPressed, isHot);
+				else
+					ControlPaint.DrawBorder3D(g, r, Border3DStyle.RaisedInner);
+			else
+			{
+				using (Brush b = new SolidBrush(stateStyle.BackColor))
+					g.FillRectangle(b, r);
+			}
+
+			// Draw the frame if the style asks for one
+			if (!stateStyle.FrameColor.IsEmpty && stateStyle.FrameWidth > 0f)
+			{
+				RectangleF r2 = r;
+				r2.Inflate(-stateStyle.FrameWidth, -stateStyle.FrameWidth);
+				using (Pen pen = new Pen(stateStyle.FrameColor, stateStyle.FrameWidth))
+					g.DrawRectangle(pen, r2.X, r2.Y, r2.Width, r2.Height);
+			}
+		}
+
+		/// <summary>
+		/// Draw a more-or-less pure themed header background.
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="r"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="isPressed"></param>
+		/// <param name="isHot"></param>
+		protected void DrawThemedBackground(Graphics g, Rectangle r, int columnIndex, bool isPressed, bool isHot)
+		{
+			int part = 1; // normal item
+			if (columnIndex == 0 &&
+				VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.ItemLeft.Normal))
+				part = 2; // left item
+			if (columnIndex == ListView.Columns.Count - 1 &&
+				VisualStyleRenderer.IsElementDefined(VisualStyleElement.Header.ItemRight.Normal))
+				part = 3; // right item
+
+			int state = 1; // normal state
+			if (isPressed)
+				state = 3; // pressed
+			else if (isHot)
+				state = 2; // hot
+
+			VisualStyleRenderer renderer = new VisualStyleRenderer("HEADER", part, state);
+			renderer.DrawBackground(g, r);
+		}
+
+		/// <summary>
+		/// Draw a sort indicator using themes
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="r"></param>
+		protected void DrawThemedSortIndicator(Graphics g, Rectangle r)
+		{
+			VisualStyleRenderer renderer2 = null;
+			if (ListView.LastSortOrder == SortOrder.Ascending)
+				renderer2 = new VisualStyleRenderer(VisualStyleElement.Header.SortArrow.SortedUp);
+			if (ListView.LastSortOrder == SortOrder.Descending)
+				renderer2 = new VisualStyleRenderer(VisualStyleElement.Header.SortArrow.SortedDown);
+			if (renderer2 != null)
+			{
+				Size sz = renderer2.GetPartSize(g, ThemeSizeType.True);
+				Point pt = renderer2.GetPoint(PointProperty.Offset);
+				// GetPoint() should work, but if it doesn't, put the arrow in the top middle
+				if (pt.X == 0 && pt.Y == 0)
+					pt = new Point(r.X + (r.Width / 2) - (sz.Width / 2), r.Y);
+				renderer2.DrawBackground(g, new Rectangle(pt, sz));
+			}
+		}
+
+		/// <summary>
+		/// Draw a sort indicator without using themes
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		protected Rectangle DrawUnthemedSortIndicator(Graphics g, Rectangle r)
+		{
+			// No theme support for sort indicators. So, we draw a triangle at the right edge
+			// of the column header.
+			const int triangleHeight = 16;
+			const int triangleWidth = 16;
+			const int midX = triangleWidth / 2;
+			const int midY = (triangleHeight / 2) - 1;
+			const int deltaX = midX - 2;
+			const int deltaY = deltaX / 2;
+
+			Point triangleLocation = new Point(r.Right - triangleWidth - 2, r.Top + (r.Height - triangleHeight) / 2);
+			Point[] pts = new Point[] { triangleLocation, triangleLocation, triangleLocation };
+
+			if (ListView.LastSortOrder == SortOrder.Ascending)
+			{
+				pts[0].Offset(midX - deltaX, midY + deltaY);
+				pts[1].Offset(midX, midY - deltaY - 1);
+				pts[2].Offset(midX + deltaX, midY + deltaY);
+			}
+			else
+			{
+				pts[0].Offset(midX - deltaX, midY - deltaY);
+				pts[1].Offset(midX, midY + deltaY);
+				pts[2].Offset(midX + deltaX, midY - deltaY);
+			}
+
+			g.FillPolygon(Brushes.SlateGray, pts);
+			r.Width = r.Width - triangleWidth;
+			return r;
+		}
+
+		/// <summary>
+		/// Draw the header's image and text
+		/// </summary>
+		/// <param name="g"></param>
+		/// <param name="r"></param>
+		/// <param name="column"></param>
+		/// <param name="stateStyle"></param>
+		protected void DrawHeaderImageAndText(Graphics g, Rectangle r, OLVColumn column, HeaderStateStyle stateStyle)
+		{
+
+			TextFormatFlags flags = TextFormatFlags;
+			flags |= TextFormatFlags.VerticalCenter;
+			if (column.HeaderTextAlignOrDefault == HorizontalAlignment.Center)
+				flags |= TextFormatFlags.HorizontalCenter;
+			if (column.HeaderTextAlignOrDefault == HorizontalAlignment.Right)
+				flags |= TextFormatFlags.Right;
+
+			Font f = ListView.HeaderUsesThemes ? ListView.Font : stateStyle.Font ?? ListView.Font;
+			Color color = ListView.HeaderUsesThemes ? Color.Black : stateStyle.ForeColor;
+			if (color.IsEmpty)
+				color = Color.Black;
+
+			const int imageTextGap = 3;
+
+			if (column.IsHeaderVertical)
+			{
+				DrawVerticalText(g, r, column, f, color);
+			}
+			else
+			{
+				// Does the column have a header image and is there space for it?
+				if (column.HasHeaderImage && r.Width > column.ImageList.ImageSize.Width * 2)
+					DrawImageAndText(g, r, column, flags, f, color, imageTextGap);
+				else
+					DrawText(g, r, column, flags, f, color);
+			}
+		}
+
+		private void DrawText(Graphics g, Rectangle r, OLVColumn column, TextFormatFlags flags, Font f, Color color)
+		{
+			if (column.ShowTextInHeader)
+				TextRenderer.DrawText(g, column.Text, f, r, color, Color.Transparent, flags);
+		}
+
+		private void DrawImageAndText(Graphics g, Rectangle r, OLVColumn column, TextFormatFlags flags, Font f,
+			Color color, int imageTextGap)
+		{
+			Rectangle textRect = r;
+			textRect.X += (column.ImageList.ImageSize.Width + imageTextGap);
+			textRect.Width -= (column.ImageList.ImageSize.Width + imageTextGap);
+
+			Size textSize = Size.Empty;
+			if (column.ShowTextInHeader)
+				textSize = TextRenderer.MeasureText(g, column.Text, f, textRect.Size, flags);
+
+			int imageY = r.Top + ((r.Height - column.ImageList.ImageSize.Height) / 2);
+			int imageX = textRect.Left;
+			if (column.HeaderTextAlignOrDefault == HorizontalAlignment.Center)
+				imageX = textRect.Left + ((textRect.Width - textSize.Width) / 2);
+			if (column.HeaderTextAlignOrDefault == HorizontalAlignment.Right)
+				imageX = textRect.Right - textSize.Width;
+			imageX -= (column.ImageList.ImageSize.Width + imageTextGap);
+
+			column.ImageList.Draw(g, imageX, imageY, column.ImageList.Images.IndexOfKey(column.HeaderImageKey));
+
+			DrawText(g, textRect, column, flags, f, color);
+		}
+
+		private static void DrawVerticalText(Graphics g, Rectangle r, OLVColumn column, Font f, Color color)
+		{
+			try
+			{
+				// Create a matrix transformation that will rotate the text 90 degrees vertically
+				// AND place the text in the middle of where it was previously. [Think of tipping
+				// a box over by its bottom left edge -- you have to move it back a bit so it's
+				// in the same place as it started]
+				Matrix m = new Matrix();
+				m.RotateAt(-90, new Point(r.X, r.Bottom));
+				m.Translate(0, r.Height);
+				g.Transform = m;
+				StringFormat fmt = new StringFormat(StringFormatFlags.NoWrap);
+				fmt.Alignment = StringAlignment.Near;
+				fmt.LineAlignment = column.HeaderTextAlignAsStringAlignment;
+				//fmt.Trimming = StringTrimming.EllipsisCharacter;
+
+				// The drawing is rotated 90 degrees, so switch our text boundaries
+				Rectangle textRect = r;
+				textRect.Width = r.Height;
+				textRect.Height = r.Width;
+				using (Brush b = new SolidBrush(color))
+					g.DrawString(column.Text, f, b, textRect, fmt);
+			}
+			finally
+			{
+				g.ResetTransform();
+			}
+		}
+
+		/// <summary>
+		/// Return the header format that should be used for the given column
+		/// </summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
+		protected HeaderFormatStyle CalculateHeaderStyle(OLVColumn column)
+		{
+			return column.HeaderFormatStyle ?? ListView.HeaderFormatStyle ?? new HeaderFormatStyle();
+		}
+
+		/// <summary>
+		/// What style should be applied to the header?
+		/// </summary>
+		/// <param name="column"></param>
+		/// <param name="isHot"></param>
+		/// <param name="isPressed"></param>
+		/// <returns></returns>
+		protected HeaderStateStyle CalculateStateStyle(OLVColumn column, bool isHot, bool isPressed)
+		{
+			HeaderFormatStyle headerStyle = CalculateHeaderStyle(column);
+			if (ListView.IsDesignMode)
+				return headerStyle.Normal;
+			if (isPressed)
+				return headerStyle.Pressed;
+			if (isHot)
+				return headerStyle.Hot;
+			return headerStyle.Normal;
+		}
+
+		/// <summary>
+		/// What font should be used to draw the header text?
+		/// </summary>
+		/// <param name="column"></param>
+		/// <param name="isHot"></param>
+		/// <param name="isPressed"></param>
+		/// <returns></returns>
+		protected Font CalculateFont(OLVColumn column, bool isHot, bool isPressed)
+		{
+			HeaderStateStyle stateStyle = CalculateStateStyle(column, isHot, isPressed);
+			return stateStyle.Font ?? ListView.Font;
+		}
+
+		/// <summary>
+		/// What flags will be used when drawing text
+		/// </summary>
+		protected TextFormatFlags TextFormatFlags
+		{
+			get
+			{
+				TextFormatFlags flags = TextFormatFlags.EndEllipsis |
+					TextFormatFlags.NoPrefix |
+					TextFormatFlags.WordEllipsis |
+					TextFormatFlags.PreserveGraphicsTranslateTransform;
+				if (WordWrap)
+					flags |= TextFormatFlags.WordBreak;
+				else
+					flags |= TextFormatFlags.SingleLine;
+				if (ListView.RightToLeft == RightToLeft.Yes)
+					flags |= TextFormatFlags.RightToLeft;
+
+				return flags;
+			}
+		}
+
+		/// <summary>
+		/// Perform a HitTest for the header control
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		/// <returns>Null if the given point isn't over the header</returns>
+		internal OlvListViewHitTestInfo.HeaderHitTestInfo HitTest(int x, int y)
+		{
+			Rectangle r = ClientRectangle;
+			if (!r.Contains(x, y))
+				return null;
+
+			Point pt = new Point(x + ListView.LowLevelScrollPosition.X, y);
+
+			OlvListViewHitTestInfo.HeaderHitTestInfo hti = new OlvListViewHitTestInfo.HeaderHitTestInfo();
+			hti.ColumnIndex = NativeMethods.GetColumnUnderPoint(Handle, pt);
+			hti.IsOverCheckBox = IsPointOverHeaderCheckBox(hti.ColumnIndex, pt);
+			hti.OverDividerIndex = NativeMethods.GetDividerUnderPoint(Handle, pt);
+
+			return hti;
+		}
+
+		#endregion
+	}
+}
