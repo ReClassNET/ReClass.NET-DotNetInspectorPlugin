@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.Runtime;
 namespace DotNetInspectorPlugin
 {
 	[DebuggerDisplay("{" + nameof(DebuggerDisplay) + ",nq}")]
-	class DotNetObject : IComparable<DotNetObject>
+	internal class DotNetObject : IComparable<DotNetObject>
 	{
 		public string DebuggerDisplay => $"{Type.Name} {Name}";
 
@@ -78,7 +78,7 @@ namespace DotNetInspectorPlugin
 		{
 			if (Parent == null)
 			{
-				return Name == null ? string.Empty : Name;
+				return Name ?? string.Empty;
 			}
 
 			return Parent.GetRootName();
@@ -111,11 +111,11 @@ namespace DotNetInspectorPlugin
 				{
 					return (bool)value ? bool.TrueString : bool.FalseString;
 				}
-				else if (Type.ElementType == ClrElementType.Char)
+				if (Type.ElementType == ClrElementType.Char)
 				{
 					return $"'{value}'";
 				}
-				else if (Type.ElementType == ClrElementType.String)
+				if (Type.ElementType == ClrElementType.String)
 				{
 					if (value == null)
 					{
@@ -123,10 +123,9 @@ namespace DotNetInspectorPlugin
 					}
 					return $"\"{value}\"";
 				}
-				else if (IsFloatingPointValueType || IsIntegerValueType)
+				if (IsFloatingPointValueType || IsIntegerValueType)
 				{
-					var formattable = value as IFormattable;
-					if (formattable != null)
+					if (value is IFormattable formattable)
 					{
 						string format = null;
 						if (IsIntegerValueType && hex)
@@ -137,7 +136,7 @@ namespace DotNetInspectorPlugin
 					}
 					return value.ToString();
 				}
-				else if (Type.ElementType == ClrElementType.FunctionPointer)
+				if (Type.ElementType == ClrElementType.FunctionPointer)
 				{
 					return $"0x{value:X}";
 				}
@@ -153,7 +152,7 @@ namespace DotNetInspectorPlugin
 
 		public int CompareTo(DotNetObject other)
 		{
-			return Name.CompareTo(other?.Name);
+			return string.Compare(Name, other?.Name, StringComparison.Ordinal);
 		}
 	}
 }

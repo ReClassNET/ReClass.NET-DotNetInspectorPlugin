@@ -8,7 +8,7 @@ using ReClassNET.Util;
 
 namespace DotNetInspectorPlugin
 {
-	class ReClassNetDataReader : IDataReader
+	internal class ReClassNetDataReader : IDataReader
 	{
 		private readonly RemoteProcess process;
 

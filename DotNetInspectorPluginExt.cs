@@ -23,12 +23,7 @@ namespace DotNetInspectorPlugin
 				Terminate();
 			}
 
-			if (pluginHost == null)
-			{
-				throw new ArgumentNullException(nameof(pluginHost));
-			}
-
-			host = pluginHost;
+			host = pluginHost ?? throw new ArgumentNullException(nameof(pluginHost));
 
 			var menuItem = host.MainWindow.MainMenu.Items.OfType<ToolStripMenuItem>().FirstOrDefault(i => i.Text == "Process");
 			if (menuItem != null)

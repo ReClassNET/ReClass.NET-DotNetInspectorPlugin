@@ -31,10 +31,7 @@ namespace DotNetInspectorPlugin
 				e.Cancel = ((DotNetObject)e.RowObject).IsValueType == false;
 			};
 
-			olvColumnValue.AspectGetter = obj =>
-			{
-				return ((DotNetObject)obj).GetFormattedValue(false);
-			};
+			olvColumnValue.AspectGetter = obj => ((DotNetObject)obj).GetFormattedValue(false);
 
 			olvColumnValue.AspectPutter = (obj, value) =>
 			{

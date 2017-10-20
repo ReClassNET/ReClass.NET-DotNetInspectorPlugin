@@ -6,9 +6,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace DotNetInspectorPlugin
 {
-	class DotNetObjectCollector
+	internal class DotNetObjectCollector
 	{
-		private ClrHeap heap;
+		private readonly ClrHeap heap;
 
 		public DotNetObjectCollector(ClrHeap heap)
 		{
@@ -25,7 +25,7 @@ namespace DotNetInspectorPlugin
 			foreach (var root in heap.EnumerateRoots())
 			{
 				heap.EnumerateObjectAddresses();
-				if (root == null || root.Type == null || root.Name == null)
+				if (root?.Type == null || root.Name == null)
 				{
 					continue;
 				}
@@ -116,9 +116,9 @@ namespace DotNetInspectorPlugin
 		}
 	}
 
-	public class ClrGlobals
+	internal class ClrGlobals
 	{
-		public static readonly string[] ExcludeRootNamespaces = new string[]
+		public static readonly string[] ExcludeRootNamespaces =
 		{
 			"System.",
 			"Microsoft.",
@@ -128,7 +128,7 @@ namespace DotNetInspectorPlugin
 			"Newtonsoft.",
 		};
 
-		public static readonly string[] ExcludeNames = new string[]
+		public static readonly string[] ExcludeNames =
 		{
 			"finalization handle",
 			"strong handle",
@@ -137,7 +137,7 @@ namespace DotNetInspectorPlugin
 			"local var"
 		};
 
-		public static readonly string[] ExcludePrefix = new string[]
+		public static readonly string[] ExcludePrefix =
 		{
 			"static var "
 		};
