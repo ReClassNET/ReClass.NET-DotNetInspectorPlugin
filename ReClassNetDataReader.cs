@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
+using ReClassNET.Extensions;
 using ReClassNET.Memory;
-using ReClassNET.Util;
 
 namespace DotNetInspectorPlugin
 {
@@ -21,23 +22,16 @@ namespace DotNetInspectorPlugin
 
 		public IList<ModuleInfo> EnumerateModules()
 		{
-			var result = new List<ModuleInfo>();
+			process.EnumerateRemoteSectionsAndModules(out _, out var modules);
 
-			process.EnumerateRemoteSectionsAndModules(
-				null,
-				m =>
+			return modules
+				.Select(m => new ModuleInfo(this)
 				{
-					var module = new ModuleInfo(this)
-					{
-						FileName = m.Path,
-						ImageBase = (ulong) m.Start,
-						FileSize = (uint) m.End.Sub(m.Start)
-					};
-					result.Add(module);
-				}
-			);
-
-			return result;
+					FileName = m.Path,
+					ImageBase = (ulong)m.Start,
+					FileSize = (uint)m.End.Sub(m.Start)
+				})
+				.ToList();
 		}
 
 		public Architecture GetArchitecture()
@@ -56,7 +50,7 @@ namespace DotNetInspectorPlugin
 
 			bytesRead = bytesRequested;
 
-			return process.ReadRemoteMemoryIntoBuffer(new IntPtr((long)address), ref buffer, 0, bytesRequested);
+			return process.ReadRemoteMemoryIntoBuffer((IntPtr)address, ref buffer, 0, bytesRequested);
 		}
 
 		public bool ReadMemory(ulong address, IntPtr buffer, int bytesRequested, out int bytesRead)
@@ -64,7 +58,7 @@ namespace DotNetInspectorPlugin
 			bytesRead = bytesRequested;
 
 			var temp = new byte[bytesRequested];
-			if (!process.ReadRemoteMemoryIntoBuffer(new IntPtr((long)address), ref temp))
+			if (!process.ReadRemoteMemoryIntoBuffer((IntPtr)address, ref temp))
 			{
 				return false;
 			}
@@ -76,7 +70,7 @@ namespace DotNetInspectorPlugin
 
 		public ulong ReadPointerUnsafe(ulong address)
 		{
-			return process.ReadRemoteObject<ulong>(new IntPtr((long)address));
+			return process.ReadRemoteUInt64((IntPtr)address);
 		}
 	}
 }
