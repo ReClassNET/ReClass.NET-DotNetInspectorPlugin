@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 using ReClassNET.Extensions;
 using ReClassNET.Memory;
@@ -63,7 +62,7 @@ namespace DotNetInspectorPlugin
 				return false;
 			}
 
-			Marshal.Copy(temp, 0, buffer, bytesRequested);
+			System.Runtime.InteropServices.Marshal.Copy(temp, 0, buffer, bytesRequested);
 
 			return true;
 		}
