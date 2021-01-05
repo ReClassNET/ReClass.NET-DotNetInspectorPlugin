@@ -2,8 +2,6 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using Microsoft.Diagnostics.Runtime;
-using ReClassNET;
 using ReClassNET.Plugins;
 
 namespace DotNetInspectorPlugin
